@@ -5,7 +5,7 @@ import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import '@aws-amplify/ui-react/styles.css'
 import './App.css'
 
-// 2. Configuración con tus IDs correctos de Terraform (NO TOCAR)
+// 2. Configuración (Mantenemos tus IDs de Terraform)
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -15,17 +15,22 @@ Amplify.configure({
   }
 });
 
-// Tu URL real de API Gateway
 const API_BASE = "https://8iu9v78txc.execute-api.us-east-1.amazonaws.com"
 
 function App() {
-  // --- A. LÓGICA DE AUTENTICACIÓN DINÁMICA ---
-  // Obtenemos authStatus ('authenticated'/'unauthenticated'), user, y signOut
-  const { user, signOut, authStatus } = useAuthenticator((context) => [context.user]);
-  // Estado local para mostrar/ocultar la sección de login
+  // --- A. LÓGICA DE AUTENTICACIÓN ---
+  const { user, signOut, authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [showLoginSection, setShowLoginSection] = useState(false); 
 
-  // --- B. LÓGICA DE TAREAS (Tus funciones originales intactas) ---
+  // --- CRUCIAL: "REDIRECCIÓN" AUTOMÁTICA ---
+  // Cuando el estado cambia a 'authenticated', cerramos la sección de login automáticamente
+  useEffect(() => {
+    if (authStatus === 'authenticated') {
+      setShowLoginSection(false);
+    }
+  }, [authStatus]);
+
+  // --- B. LÓGICA DE TAREAS (Funciones originales 100% preservadas) ---
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -131,46 +136,45 @@ function App() {
     setEditingTitle('')
   }
 
-  // --- C. RENDERIZADO DINÁMICO (VISTAZO PÚBLICO) ---
+  // --- C. RENDERIZADO ---
   return (
     <div className="app">
-      {/* 1. CABECERA CON BOTÓN DE ACCIÓN DINÁMICO */}
+      {/* 1. HEADER DINÁMICO */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Organizador Pro Remasterizado v2.0 🚀</h1>
+        <h1>Organizador Pro v2.0 🚀</h1>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           {authStatus === 'authenticated' ? (
-            // Si YA ESTÁ autenticado, mostramos perfil y botón de SALIR
             <>
-              <span style={{ fontSize: '0.9rem', color: '#888' }}>
-                👤 {user.username}
+              <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                👤 <strong>{user.username}</strong>
               </span>
               <button onClick={signOut} className="btn-small danger">Cerrar Sesión</button>
             </>
           ) : (
-            // Si NO ESTÁ autenticado, mostramos botón de INICIAR SESIÓN
             <button 
               onClick={() => setShowLoginSection(!showLoginSection)} 
               className="btn-small primary"
             >
-              {showLoginSection ? 'Volver a la lista' : 'Iniciar Sesión / Registrarse'}
+              {showLoginSection ? 'Cancelar' : 'Iniciar Sesión / Registrarse'}
             </button>
           )}
         </div>
       </header>
 
-      {/* 2. SECCIÓN DE AUTENTICACIÓN OPCIONAL (Solo visible si showLoginSection es true y no está logueado) */}
-      {showLoginSection && authStatus === 'unauthenticated' && (
-        <div className="auth-card-container" style={{ marginBottom: '50px', maxWidth: '500px', margin: '0 auto' }}>
+      {/* 2. SECCIÓN DE LOGIN (Solo si se solicita y no hay sesión) */}
+      {showLoginSection && authStatus !== 'authenticated' && (
+        <div className="auth-container" style={{ marginBottom: '40px', animation: 'fadeIn 0.3s' }}>
           <Authenticator />
         </div>
       )}
 
-      {/* 3. CONTENIDO PRINCIPAL (Siempre visible - Tu lista de tareas original) */}
-      <main 
-        className={`app-content ${authStatus === 'unauthenticated' ? 'guest-mode' : ''}`}
-        style={{ opacity: (showLoginSection && authStatus === 'unauthenticated') ? 0.3 : 1, transition: 'opacity 0.3s' }}
-      >
+      {/* 3. LISTA DE TAREAS (Siempre funcional) */}
+      <main style={{ 
+        opacity: (showLoginSection && authStatus !== 'authenticated') ? 0.2 : 1, 
+        transition: 'opacity 0.4s ease',
+        pointerEvents: (showLoginSection && authStatus !== 'authenticated') ? 'none' : 'auto'
+      }}>
         <form className="add-form" onSubmit={addTask}>
           <input
             type="text"
@@ -178,33 +182,29 @@ function App() {
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             disabled={adding}
-            aria-label="Título de la nueva tarea"
           />
           <button type="submit" disabled={!newTaskTitle.trim() || adding}>
-            {adding ? 'Añadiendo…' : 'Añadir'}
+            {adding ? '...' : 'Añadir'}
           </button>
         </form>
 
         {error && <p className="error">{error}</p>}
 
         {loading ? (
-          <p className="loading">Cargando tareas p&uacute;blicas…</p>
+          <p className="loading">Cargando tareas...</p>
         ) : (
           <ul className="task-list">
             {tasks.length === 0 && !error && (
-              <li className="empty">No hay tareas públicas. ¡Crea la primera!</li>
+              <li className="empty">No hay tareas. ¡Empieza hoy!</li>
             )}
             {tasks.map((task) => (
-              <li
-                key={task.id}
-                className={`task ${task.completed ? 'completed' : ''}`}
-              >
+              <li key={task.id} className={`task ${task.completed ? 'completed' : ''}`}>
                 <input
                   type="checkbox"
                   checked={task.completed}
                   onChange={() => toggleCompleted(task)}
-                  aria-label={`Marcar como ${task.completed ? 'pendiente' : 'completada'}`}
                 />
+                
                 {editingId === task.id ? (
                   <>
                     <input
@@ -219,13 +219,13 @@ function App() {
                       autoFocus
                     />
                     <button onClick={() => saveEdit(task.id)} className="btn-small primary">Guardar</button>
-                    <button onClick={cancelEdit} className="btn-small">Cancelar</button>
+                    <button onClick={cancelEdit} className="btn-small">X</button>
                   </>
                 ) : (
                   <>
                     <span className="task-title">{task.title}</span>
-                    <button onClick={() => startEdit(task)} className="btn-small">Editar</button>
-                    <button onClick={() => deleteTask(task.id)} className="btn-small danger">Eliminar</button>
+                    <button onClick={() => startEdit(task)} className="btn-small">Ed</button>
+                    <button onClick={() => deleteTask(task.id)} className="btn-small danger">Del</button>
                   </>
                 )}
               </li>
