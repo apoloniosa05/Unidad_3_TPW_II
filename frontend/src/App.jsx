@@ -138,7 +138,7 @@ function App() {
             <button onClick={signOut} className="btn-small danger">Cerrar Sesión</button>
           </header>
 
-          <h1>Lista de tareas</h1>
+          <h1>Organizador de Tareas Pro Remasterizado versión 2.0 🚀</h1>
 
           <form className="add-form" onSubmit={addTask}>
             <input
