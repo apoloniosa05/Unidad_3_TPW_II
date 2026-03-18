@@ -57,7 +57,7 @@ resource "aws_iam_role" "lambda_tasks" {
 
 resource "aws_iam_role_policy" "lambda_tasks_dynamodb" {
   name = "dynamodb"
-  role = aws_iam_role.lambda_tasks.id   # rol: se usa id (nombre del rol)
+  role = aws_iam_role.lambda_tasks.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -65,7 +65,7 @@ resource "aws_iam_role_policy" "lambda_tasks_dynamodb" {
       {
         Effect   = "Allow"
         Action   = ["dynamodb:Scan", "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
-        Resource = [aws_dynamodb_table.tareas.arn]   # políticas IAM piden ARN, no id
+        Resource = [aws_dynamodb_table.tareas.arn]
       },
       {
         Effect   = "Allow"
@@ -96,7 +96,7 @@ data "archive_file" "lambda_tasks" {
 resource "aws_lambda_function" "tasks_api" {
   filename         = data.archive_file.lambda_tasks.output_path
   function_name    = "tasks-api-hola-fullstack"
-  role             = aws_iam_role.lambda_tasks.arn   # Lambda exige ARN del rol, no id
+  role             = aws_iam_role.lambda_tasks.arn
   handler          = "index.handler"
   source_code_hash = data.archive_file.lambda_tasks.output_base64sha256
   runtime          = "nodejs20.x"
@@ -139,7 +139,6 @@ resource "aws_apigatewayv2_route" "root" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# Deployment explícito: sin esto el stage $default puede no tener las rutas activas (sobre todo con auto_deploy = false).
 resource "aws_apigatewayv2_deployment" "tasks" {
   api_id = aws_apigatewayv2_api.tasks.id
   depends_on = [
@@ -164,25 +163,40 @@ resource "aws_lambda_permission" "apigw" {
 
 output "api_url" {
   description = "URL base de la API de tareas"
-  value       = aws_apigatewayv2_stage.default.invoke_url
+  value        = aws_apigatewayv2_stage.default.invoke_url
 }
 
-# 1. Creamos el Grupo de Usuarios (User Pool)
+# 1. Creamos el Grupo de Usuarios (User Pool) - VERSIÓN CORREGIDA
 resource "aws_cognito_user_pool" "pool" {
-  name = "Unidad3_UserPool"
+  name = "Unidad3_UserPool_V2" # Le cambiamos el nombre para evitar conflictos de caché
 
-  # Configuración básica de contraseña
+  # Esto obliga a que el usuario entre con su Email y lo verifique al registrarse
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+
   password_policy {
-    minimum_length = 8
+    minimum_length    = 8
     require_lowercase = true
     require_numbers   = true
   }
 
-  auto_verified_attributes = ["email"]
+  # Configuramos la plantilla del mensaje para asegurar que use CÓDIGO
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_message        = "Tu código de verificación para Task Master Pro es {####}"
+    email_subject        = "Código de Verificación"
+  }
+
+  # Definimos el esquema del email como obligatorio desde el inicio
+  schema {
+    attribute_data_type      = "String"
+    name                     = "email"
+    required                 = true
+    mutable                  = true
+  }
 }
 
 # 2. Creamos el Cliente de la Aplicación (App Client)
-# Es lo que permite que React se comunique con Cognito
 resource "aws_cognito_user_pool_client" "client" {
   name         = "ReactAppClient"
   user_pool_id = aws_cognito_user_pool.pool.id
@@ -194,7 +208,7 @@ resource "aws_cognito_user_pool_client" "client" {
   ]
 }
 
-# 3. Outputs: Para que Terraform nos diga los IDs al terminar
+# 3. Outputs
 output "cognito_user_pool_id" {
   value = aws_cognito_user_pool.pool.id
 }
