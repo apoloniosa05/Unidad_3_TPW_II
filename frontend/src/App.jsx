@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-// 1. Importaciones de AWS Amplify UI
 import { Amplify } from 'aws-amplify'
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import '@aws-amplify/ui-react/styles.css'
 import './App.css'
 
-// 2. Configuración (Mantenemos tus IDs de Terraform)
+// 1. Configuración de AWS (Tus IDs reales)
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -18,19 +17,20 @@ Amplify.configure({
 const API_BASE = "https://8iu9v78txc.execute-api.us-east-1.amazonaws.com"
 
 function App() {
-  // --- A. LÓGICA DE AUTENTICACIÓN ---
-  const { user, signOut, authStatus } = useAuthenticator((context) => [context.authStatus]);
+  // --- LÓGICA DE AUTENTICACIÓN ---
+  // Extraemos authStatus para saber en qué estado está la sesión
+  const { user, signOut, authStatus } = useAuthenticator((context) => [context.authStatus, context.user]);
   const [showLoginSection, setShowLoginSection] = useState(false); 
 
-  // --- CRUCIAL: "REDIRECCIÓN" AUTOMÁTICA ---
-  // Cuando el estado cambia a 'authenticated', cerramos la sección de login automáticamente
+  // --- ARREGLO PARA LA PANTALLA EN BLANCO ---
+  // En cuanto el estado pase a 'authenticated', cerramos la sección de login a la fuerza
   useEffect(() => {
     if (authStatus === 'authenticated') {
-      setShowLoginSection(false);
+      setShowLoginSection(false); 
     }
   }, [authStatus]);
 
-  // --- B. LÓGICA DE TAREAS (Funciones originales 100% preservadas) ---
+  // --- LÓGICA DE TAREAS (Tus funciones originales 100% funcionales) ---
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -136,18 +136,18 @@ function App() {
     setEditingTitle('')
   }
 
-  // --- C. RENDERIZADO ---
+  // --- RENDERIZADO ---
   return (
     <div className="app">
       {/* 1. HEADER DINÁMICO */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Organizador Pro v2.0 🚀</h1>
+        <h1>Task Master Pro v2.0 🚀</h1>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           {authStatus === 'authenticated' ? (
             <>
               <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                👤 <strong>{user.username}</strong>
+                👤 <strong>{user?.username}</strong>
               </span>
               <button onClick={signOut} className="btn-small danger">Cerrar Sesión</button>
             </>
@@ -156,29 +156,29 @@ function App() {
               onClick={() => setShowLoginSection(!showLoginSection)} 
               className="btn-small primary"
             >
-              {showLoginSection ? 'Cancelar' : 'Iniciar Sesión / Registrarse'}
+              {showLoginSection ? 'Volver a la Lista' : 'Entrar / Registrarse'}
             </button>
           )}
         </div>
       </header>
 
-      {/* 2. SECCIÓN DE LOGIN (Solo si se solicita y no hay sesión) */}
+      {/* 2. SECCIÓN DE LOGIN (Solo se muestra si el usuario la pide y NO está autenticado) */}
       {showLoginSection && authStatus !== 'authenticated' && (
-        <div className="auth-container" style={{ marginBottom: '40px', animation: 'fadeIn 0.3s' }}>
+        <div className="auth-overlay" style={{ marginBottom: '40px', padding: '20px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '15px' }}>
           <Authenticator />
         </div>
       )}
 
-      {/* 3. LISTA DE TAREAS (Siempre funcional) */}
+      {/* 3. LISTA DE TAREAS (Siempre visible, pero se atenúa si el login está abierto) */}
       <main style={{ 
-        opacity: (showLoginSection && authStatus !== 'authenticated') ? 0.2 : 1, 
-        transition: 'opacity 0.4s ease',
-        pointerEvents: (showLoginSection && authStatus !== 'authenticated') ? 'none' : 'auto'
+        opacity: (showLoginSection && authStatus !== 'authenticated') ? 0.2 : 1,
+        pointerEvents: (showLoginSection && authStatus !== 'authenticated') ? 'none' : 'auto',
+        transition: 'all 0.4s ease'
       }}>
         <form className="add-form" onSubmit={addTask}>
           <input
             type="text"
-            placeholder="Nueva tarea..."
+            placeholder="Nueva tarea pública..."
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             disabled={adding}
@@ -195,7 +195,7 @@ function App() {
         ) : (
           <ul className="task-list">
             {tasks.length === 0 && !error && (
-              <li className="empty">No hay tareas. ¡Empieza hoy!</li>
+              <li className="empty">No hay tareas. ¡Agrega una!</li>
             )}
             {tasks.map((task) => (
               <li key={task.id} className={`task ${task.completed ? 'completed' : ''}`}>
@@ -204,7 +204,6 @@ function App() {
                   checked={task.completed}
                   onChange={() => toggleCompleted(task)}
                 />
-                
                 {editingId === task.id ? (
                   <>
                     <input
@@ -218,7 +217,7 @@ function App() {
                       }}
                       autoFocus
                     />
-                    <button onClick={() => saveEdit(task.id)} className="btn-small primary">Guardar</button>
+                    <button onClick={() => saveEdit(task.id)} className="btn-small primary">Listo</button>
                     <button onClick={cancelEdit} className="btn-small">X</button>
                   </>
                 ) : (
