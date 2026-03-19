@@ -154,64 +154,60 @@ function App() {
 
   return (
     <div className="app">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1>Organizador Pro Remasterizado v2.0 🚀</h1>
+      <header className="app-header">
+        <h1>Organizador Pro v2.0 🚀</h1>
         
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div className="user-controls">
           {authStatus === 'authenticated' ? (
             <>
-              <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>👤 <strong>{user?.username}</strong></span>
-              <button onClick={signOut} className="btn-small danger">Cerrar Sesión</button>
+              <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>👤 {user?.username}</span>
+              <button onClick={signOut} className="btn-small danger">Salir</button>
             </>
           ) : (
             <button onClick={() => setShowLoginSection(!showLoginSection)} className="btn-small primary">
-              {showLoginSection ? 'Cancelar' : 'Entrar / Registrarse'}
+              {showLoginSection ? 'Cancelar Registro' : 'Entrar / Registrarse'}
             </button>
           )}
         </div>
       </header>
 
-      {/* SECCIÓN DE AUTENTICACIÓN */}
+      {/* SECCIÓN DE AUTENTICACIÓN - Centrada vía CSS */}
       {showLoginSection && authStatus !== 'authenticated' && (
-        <div className="auth-card-container" style={{ marginBottom: '40px' }}>
+        <div className="auth-card-container">
           <Authenticator />
         </div>
       )}
 
-      {/* CONTENIDO PRINCIPAL */}
       <main style={{ 
-        opacity: (showLoginSection && authStatus !== 'authenticated') ? 0.2 : 1,
+        opacity: (showLoginSection && authStatus !== 'authenticated') ? 0.1 : 1,
         pointerEvents: (showLoginSection && authStatus !== 'authenticated') ? 'none' : 'auto',
-        transition: 'opacity 0.4s ease'
+        transition: 'all 0.4s ease'
       }}>
         
-        {/* FORMULARIO: Bloqueado si no hay sesión */}
         <form className="add-form" onSubmit={addTask}>
           <input
             type="text"
-            placeholder={authStatus === 'authenticated' ? "Nueva tarea..." : "Inicia sesión para añadir tareas"}
+            placeholder={authStatus === 'authenticated' ? "Escribe una nueva tarea..." : "Inicia sesión para editar"}
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             disabled={adding || authStatus !== 'authenticated'}
           />
-          <button type="submit" disabled={!newTaskTitle.trim() || adding || authStatus !== 'authenticated'}>
-            {adding ? 'Añadiendo…' : 'Añadir'}
+          <button type="submit" className="btn-small primary" disabled={!newTaskTitle.trim() || adding || authStatus !== 'authenticated'}>
+            {adding ? '...' : 'Añadir'}
           </button>
         </form>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" style={{color: 'var(--danger)', textAlign: 'center'}}>{error}</p>}
 
         {loading ? (
-          <p className="loading">Cargando tareas…</p>
+          <p className="loading" style={{textAlign: 'center', color: 'var(--text-dim)'}}>Cargando tus tareas...</p>
         ) : (
-          <ul className="task-list">
+          <ul className="task-list" style={{listStyle: 'none', padding: 0}}>
             {tasks.length === 0 && !error && (
-              <li className="empty">No hay tareas públicas.</li>
+              <li style={{textAlign: 'center', color: 'var(--text-dim)', marginTop: '20px'}}>No hay tareas disponibles.</li>
             )}
             {tasks.map((task) => (
               <li key={task.id} className={`task ${task.completed ? 'completed' : ''}`}>
-                
-                {/* Checkbox: Deshabilitado si no hay sesión */}
                 <input
                   type="checkbox"
                   checked={task.completed}
@@ -220,30 +216,25 @@ function App() {
                 />
 
                 {editingId === task.id ? (
-                  <>
+                  <div style={{display: 'flex', gap: '8px', flex: 1}}>
                     <input
                       type="text"
                       className="edit-input"
+                      style={{background: '#000', border: '1px solid var(--primary-color)', color: '#fff', padding: '5px', borderRadius: '8px', flex: 1}}
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(task.id)
-                        if (e.key === 'Escape') cancelEdit()
-                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && saveEdit(task.id)}
                       autoFocus
                     />
-                    <button onClick={() => saveEdit(task.id)} className="btn-small primary">Guardar</button>
-                    <button onClick={cancelEdit} className="btn-small">Cancelar</button>
-                  </>
+                    <button onClick={() => saveEdit(task.id)} className="btn-small primary">OK</button>
+                  </div>
                 ) : (
                   <>
                     <span className="task-title">{task.title}</span>
-                    
-                    {/* ACCIONES: Solo visibles si está autenticado */}
                     {authStatus === 'authenticated' && (
                       <div className="actions">
-                        <button onClick={() => startEdit(task)} className="btn-small">Editar</button>
-                        <button onClick={() => deleteTask(task.id)} className="btn-small danger">Eliminar</button>
+                        <button onClick={() => startEdit(task)} className="btn-small">✏️</button>
+                        <button onClick={() => deleteTask(task.id)} className="btn-small danger">🗑️</button>
                       </div>
                     )}
                   </>
