@@ -27,6 +27,7 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding-top: 5vh;
+  min-height: 100vh;
 }
 
 .app {
@@ -128,7 +129,41 @@ body {
 .task-title {
   flex: 1;
   font-weight: 400;
+  color: var(--text-main);
+  transition: all 0.3s ease;
 }
+
+/* --- IMPLEMENTACIONES DE TAREA COMPLETADA --- */
+
+.task.completed {
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.task.completed .task-title {
+  color: var(--text-dim);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  opacity: 0.6;
+}
+
+/* Etiqueta dinámica de "Tarea completada" */
+.task.completed .task-title::after {
+  content: "✓ completada";
+  display: inline-block;
+  margin-left: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-decoration: none !important; /* Para que el texto no se tache */
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  padding: 2px 8px;
+  border-radius: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* -------------------------------------------- */
 
 .actions {
   display: flex;
